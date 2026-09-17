@@ -9,27 +9,84 @@ import os
 import re
 import json
 import random
+import urllib.request
 from datetime import datetime
 
+DEFAULT_MODEL_URL = "https://huggingface.co/EngineerWanga0791709020/SME-Ledger/resolve/main/sme-ledger-v2-Q4_K_M.gguf"
+
 class ModelService:
-    def __init__(self, model_path: str = None):
+    def __init__(self, model_path: str = None, model_url: str = None):
         base_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", ".."))
         default_model = os.path.join(base_dir, "models", "sme-ledger-v2-Q4_K_M.gguf")
         
         self.model_path = model_path or os.getenv("MODEL_PATH", default_model)
+        self.model_url = model_url or os.getenv("MODEL_URL", DEFAULT_MODEL_URL)
         self.engine = os.getenv("MODEL_ENGINE", "auto").lower()
         self._llm = None
         self._tried_load = False
 
+    def download_model_if_missing(self) -> bool:
+        """Check if model exists in model folder, download from Hugging Face if missing."""
+        if os.path.exists(self.model_path) and os.path.getsize(self.model_path) > 0:
+            print(f"[ModelService] GGUF model exists at '{self.model_path}'.")
+            return True
+
+        model_dir = os.path.dirname(self.model_path)
+        if model_dir:
+            os.makedirs(model_dir, exist_ok=True)
+
+        print(f"[ModelService] GGUF model file not found at '{self.model_path}'.")
+        print(f"[ModelService] Downloading model from Hugging Face ({self.model_url})...")
+
+        try:
+            req = urllib.request.Request(
+                self.model_url,
+                headers={"User-Agent": "Mozilla/5.0 (SME-Ledger-Downloader)"}
+            )
+            temp_path = self.model_path + ".tmp"
+            
+            with urllib.request.urlopen(req) as response, open(temp_path, "wb") as out_file:
+                total_size = int(response.headers.get("Content-Length", 0))
+                downloaded = 0
+                block_size = 1024 * 1024  # 1 MB chunk
+
+                while True:
+                    buffer = response.read(block_size)
+                    if not buffer:
+                        break
+                    out_file.write(buffer)
+                    downloaded += len(buffer)
+                    if total_size > 0:
+                        percent = int(downloaded * 100 / total_size)
+                        mb_dn = downloaded / (1024 * 1024)
+                        mb_tot = total_size / (1024 * 1024)
+                        if (downloaded // block_size) % 10 == 0 or percent == 100:
+                            print(f"[ModelService] Downloading: {mb_dn:.1f} MB / {mb_tot:.1f} MB ({percent}%)", flush=True)
+
+            os.rename(temp_path, self.model_path)
+            print(f"[ModelService] Model successfully downloaded to '{self.model_path}'!")
+            return True
+        except Exception as e:
+            print(f"[ModelService] Failed to download GGUF model: {e}")
+            if os.path.exists(self.model_path + ".tmp"):
+                try:
+                    os.remove(self.model_path + ".tmp")
+                except Exception:
+                    pass
+            return False
+
     def load(self):
-        """Lazy load GGUF model if file exists and llama_cpp is installed."""
+        """Lazy load GGUF model if available (downloads from HF if missing)."""
         if self._tried_load:
             return self._llm
 
         self._tried_load = True
 
+        # Check and download model if missing
+        self.download_model_if_missing()
+
         if not os.path.exists(self.model_path):
-            print(f"[ModelService] GGUF model file not found at '{self.model_path}'. Using NLP extractor engine.")
+            print(f"[ModelService] GGUF model file not available at '{self.model_path}'. Using NLP extractor engine.")
             self.engine = "fallback"
             return None
 
@@ -43,7 +100,7 @@ class ModelService:
                 verbose=False
             )
             self.engine = "llama_cpp"
-            print(f"[ModelService] Successfully loaded Gemma 3 270M GGUF model!")
+            print(f"[ModelService] Successfully loaded GGUF model!")
         except Exception as e:
             print(f"[ModelService] Could not initialize llama_cpp: {e}. Falling back to NLP extractor.")
             self._llm = None

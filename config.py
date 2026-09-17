@@ -8,6 +8,10 @@ class Config:
         "MODEL_PATH",
         os.path.join(BASE_DIR, "models", "sme-ledger-v2-Q4_K_M.gguf"),
     )
+    MODEL_URL = os.getenv(
+        "MODEL_URL",
+        "https://huggingface.co/EngineerWanga0791709020/SME-Ledger/resolve/main/sme-ledger-v2-Q4_K_M.gguf",
+    )
     DATABASE_URL = os.getenv(
         "DATABASE_URL",
         "sqlite:///" + os.path.join(BASE_DIR, "instance", "sme_ledger.db"),
