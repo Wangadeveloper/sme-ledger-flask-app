@@ -1,0 +1,285 @@
+{% extends "base.html" %}
+
+{% block title %}Dashboard · SME Financial Intelligence{% endblock %}
+
+{% block content %}
+<section class="hero-banner">
+    <div class="hero-content">
+        <span class="eyebrow"><span class="pulse-dot"></span> ON-DEVICE FINANCIAL INTELLIGENCE</span>
+        <h1>Turn Messy SMS Logs into a Structured Ledger</h1>
+        <p class="hero-lead">Extract transaction records from M-Pesa, Banking, Paybill, Till & Fuliza SMS messages and generate instant deterministic analytics locally.</p>
+    </div>
+</section>
+
+<!-- KPI Metrics Grid -->
+<section class="kpi-grid">
+    <div class="kpi-card glow-primary">
+        <div class="kpi-header">
+            <span class="kpi-title">NET CASH FLOW</span>
+            <span class="kpi-icon">💰</span>
+        </div>
+        <div class="kpi-value" id="kpi-cash-flow">KES 0.00</div>
+        <div class="kpi-footer">
+            <span class="badge" id="kpi-cash-flow-badge">No Data</span>
+            <span class="kpi-subtext" id="kpi-balance-subtext">Est. Balance: KES 0.00</span>
+        </div>
+    </div>
+
+    <div class="kpi-card glow-success">
+        <div class="kpi-header">
+            <span class="kpi-title">TOTAL INCOME</span>
+            <span class="kpi-icon">📈</span>
+        </div>
+        <div class="kpi-value text-success" id="kpi-total-income">KES 0.00</div>
+        <div class="kpi-footer">
+            <span class="kpi-subtext" id="kpi-income-txns">0 Transactions</span>
+        </div>
+    </div>
+
+    <div class="kpi-card glow-danger">
+        <div class="kpi-header">
+            <span class="kpi-title">TOTAL EXPENSES</span>
+            <span class="kpi-icon">📉</span>
+        </div>
+        <div class="kpi-value text-danger" id="kpi-total-expenses">KES 0.00</div>
+        <div class="kpi-footer">
+            <span class="kpi-subtext" id="kpi-surplus-rate">Surplus Rate: 0.0%</span>
+        </div>
+    </div>
+
+    <div class="kpi-card glow-warning">
+        <div class="kpi-header">
+            <span class="kpi-title">FINANCIAL HEALTH</span>
+            <span class="kpi-icon">🛡️</span>
+        </div>
+        <div class="kpi-value" id="kpi-health-rating">Healthy</div>
+        <div class="kpi-footer">
+            <span class="badge badge-warning" id="kpi-fuliza-badge">No Overdraft Debt</span>
+        </div>
+    </div>
+</section>
+
+<!-- Main Workspace Tabs -->
+<section class="workspace-section">
+    <div class="tab-nav">
+        <button class="tab-btn active" data-tab="tab-analytics">
+            <span class="tab-icon">📊</span> Financial Analytics
+        </button>
+        <button class="tab-btn" data-tab="tab-ingest">
+            <span class="tab-icon">📩</span> SMS Ingestion & Extractor
+        </button>
+        <button class="tab-btn" data-tab="tab-ledger">
+            <span class="tab-icon">📒</span> Financial Ledger (<span id="ledger-count-badge">0</span>)
+        </button>
+        <button class="tab-btn" data-tab="tab-advisor">
+            <span class="tab-icon">🤖</span> Local AI Advisor
+        </button>
+    </div>
+
+    <!-- Tab 1: Financial Analytics -->
+    <div class="tab-content active" id="tab-analytics">
+        <div class="analytics-grid">
+            <div class="card chart-card flex-2">
+                <div class="card-header">
+                    <div>
+                        <h3>Cash Flow Trend over Time</h3>
+                        <p class="card-subtitle">Daily aggregated income vs. expenses</p>
+                    </div>
+                </div>
+                <div class="chart-container">
+                    <canvas id="cashFlowChart"></canvas>
+                </div>
+            </div>
+
+            <div class="card chart-card flex-1">
+                <div class="card-header">
+                    <div>
+                        <h3>Category Distribution</h3>
+                        <p class="card-subtitle">Breakdown of operational spending</p>
+                    </div>
+                </div>
+                <div class="chart-container">
+                    <canvas id="categoryChart"></canvas>
+                </div>
+            </div>
+        </div>
+
+        <div class="leaderboard-grid">
+            <div class="card">
+                <div class="card-header">
+                    <h3>Top Vendors & Payees</h3>
+                    <p class="card-subtitle">Highest merchant expenses</p>
+                </div>
+                <ul class="leader-list" id="top-merchants-list">
+                    <li class="empty-state">No transactions logged yet.</li>
+                </ul>
+            </div>
+
+            <div class="card">
+                <div class="card-header">
+                    <h3>Top Income Senders</h3>
+                    <p class="card-subtitle">Main customers & revenue sources</p>
+                </div>
+                <ul class="leader-list" id="top-senders-list">
+                    <li class="empty-state">No transactions logged yet.</li>
+                </ul>
+            </div>
+
+            <div class="card">
+                <div class="card-header">
+                    <h3>Domain Breakdown</h3>
+                    <p class="card-subtitle">M-Pesa, Banking & Mobile Money share</p>
+                </div>
+                <ul class="leader-list" id="domain-breakdown-list">
+                    <li class="empty-state">No transactions logged yet.</li>
+                </ul>
+            </div>
+        </div>
+    </div>
+
+    <!-- Tab 2: SMS Ingestion & Smart Extractor -->
+    <div class="tab-content" id="tab-ingest">
+        <div class="ingest-grid">
+            <div class="card flex-1">
+                <div class="card-header">
+                    <div>
+                        <h3>Extract Transaction SMS</h3>
+                        <p class="card-subtitle">Paste transaction SMS logs or click presets to test</p>
+                    </div>
+                </div>
+
+                <div class="preset-chips">
+                    <span class="chip-label">Presets:</span>
+                    <button class="chip" data-sms="SAB8123XYZ Confirmed. You have received Ksh15,500.00 from JOHN MWANGI 254712345678 on 12/3/26 at 9:15 AM. New M-PESA balance is Ksh15,500.00.">Receive Money (Income)</button>
+                    <button class="chip" data-sms="SAC994411 Confirmed. Ksh4,500.00 paid to NAIVAS SUPERMARKET on 12/3/26 at 1:10 PM. New M-PESA balance is Ksh11,000.00. Transaction cost, Ksh15.00.">Paybill/Till (Expense)</button>
+                    <button class="chip" data-sms="EQB992211 Equity Bank: You have transferred KES 8,000.00 to Account 01109283741 on 15/3/26 15:30. Available balance KES 35,400.00.">Bank Transfer</button>
+                    <button class="chip" data-sms="FUL112233 Fuliza M-PESA: Outstanding amount is Ksh1,200.00. Repaid automatically from your deposit on 16/3/26.">Fuliza Overdraft</button>
+                </div>
+
+                <div class="form-group">
+                    <textarea id="sms-input" rows="6" placeholder="Paste an M-Pesa, Bank, Paybill, Till or Fuliza transaction message here..."></textarea>
+                </div>
+
+                <div class="action-row">
+                    <button id="extract-btn" class="btn btn-primary">
+                        <span class="btn-icon">⚡</span> Extract Transaction
+                    </button>
+                    <button id="extract-and-save-btn" class="btn btn-success">
+                        <span class="btn-icon">💾</span> Extract & Add to Ledger
+                    </button>
+                </div>
+            </div>
+
+            <div class="card flex-1">
+                <div class="card-header">
+                    <div>
+                        <h3>Structured JSON Output</h3>
+                        <p class="card-subtitle">Validated schema extracted locally</p>
+                    </div>
+                    <span id="extraction-status-badge" class="badge">Awaiting Input</span>
+                </div>
+
+                <div class="code-preview-box">
+                    <pre id="result-json">{\n  "status": "idle",\n  "message": "Paste an SMS and click Extract"\n}</pre>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Tab 3: Financial Ledger Table -->
+    <div class="tab-content" id="tab-ledger">
+        <div class="card">
+            <div class="card-header border-bottom">
+                <div>
+                    <h3>Local Financial Ledger</h3>
+                    <p class="card-subtitle">All extracted financial transaction records</p>
+                </div>
+
+                <div class="filter-controls">
+                    <input type="text" id="search-ledger" placeholder="Search reference, merchant, text..." class="input-search">
+                    <select id="filter-domain" class="select-filter">
+                        <option value="">All Domains</option>
+                        <option value="mpesa">M-Pesa</option>
+                        <option value="banking">Banking</option>
+                        <option value="paybill">Paybill</option>
+                        <option value="till">Till / Buy Goods</option>
+                        <option value="pochi">Pochi</option>
+                        <option value="fuliza">Fuliza</option>
+                    </select>
+                    <select id="filter-category" class="select-filter">
+                        <option value="">All Categories</option>
+                        <option value="food">Food & Groceries</option>
+                        <option value="inventory">Inventory & Supplies</option>
+                        <option value="utilities">Utilities & Tokens</option>
+                        <option value="sales">Sales & Revenue</option>
+                        <option value="salary">Salary & Wages</option>
+                        <option value="transport">Transport & Fuel</option>
+                        <option value="services">Services & Airtime</option>
+                        <option value="loans">Loans & Fuliza</option>
+                    </select>
+                </div>
+            </div>
+
+            <div class="table-responsive">
+                <table class="ledger-table">
+                    <thead>
+                        <tr>
+                            <th>Reference</th>
+                            <th>Date / Time</th>
+                            <th>Domain</th>
+                            <th>Category</th>
+                            <th>Entity / Merchant</th>
+                            <th>Type</th>
+                            <th>Amount (KES)</th>
+                            <th>Balance (KES)</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody id="ledger-table-body">
+                        <tr>
+                            <td colspan="9" class="text-center text-muted">Loading financial ledger...</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- Tab 4: Local AI Advisor -->
+    <div class="tab-content" id="tab-advisor">
+        <div class="card advisor-card">
+            <div class="card-header border-bottom">
+                <div>
+                    <h3>SME Financial Intelligence Advisor</h3>
+                    <p class="card-subtitle">Ask questions based on your deterministic Pandas financial profile</p>
+                </div>
+                <span class="badge badge-subtle">On-Device Engine</span>
+            </div>
+
+            <div class="advisor-quick-queries">
+                <span class="chip-label">Quick Insights:</span>
+                <button class="chip query-chip" data-query="Summarize my cash flow and surplus rate this period.">📊 Cash Flow Summary</button>
+                <button class="chip query-chip" data-query="Where am I spending the most money? What are my top expense categories?">💳 Top Spending Categories</button>
+                <button class="chip query-chip" data-query="Am I credit ready for a micro-loan based on my cash flow?">🏦 Credit & Loan Readiness</button>
+                <button class="chip query-chip" data-query="What cost reduction strategies should I take to improve my margin?">💡 Cost Reduction Tips</button>
+            </div>
+
+            <div class="chat-container-box" id="chat-messages">
+                <div class="chat-bubble assistant">
+                    <div class="bubble-header">🤖 SME Financial Advisor</div>
+                    <div class="bubble-content">
+                        Hello! I am your on-device SME Financial Intelligence Advisor. I analyze your local transaction ledger and Pandas analytics to give you actionable cash flow advice, credit readiness evaluation, and cost-reduction tips without sending your financial data to remote servers.
+                    </div>
+                </div>
+            </div>
+
+            <div class="chat-input-bar">
+                <input type="text" id="advisor-input" placeholder="Ask a financial question e.g., 'What is my surplus rate?' or 'Am I ready for a micro-loan?'">
+                <button id="advisor-send-btn" class="btn btn-primary">
+                    <span class="btn-icon">💬</span> Send
+                </button>
+            </div>
+        </div>
+    </div>
+</section>
+{% endblock %}
